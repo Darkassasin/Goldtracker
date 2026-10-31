@@ -85,7 +85,7 @@ select{font:inherit;font-size:14px;color:var(--tx);background:var(--bg);border:1
   <p class="note">Nepal trades above the converted spot price because of import duty, taxes and dealer margin, and it often adjusts a day or two after global moves.</p>
 </div>
 
-<p class="note">The forecast blends simple statistical models (linear trend, damped momentum, mean reversion, and one that follows the international spot forecast) and shows an 80% range from observed volatility. It can’t anticipate news, policy or sudden dealer-association changes, so treat it as an illustration, not financial advice. Prices come from a shared data record that is updated when new rates are published; the page re-checks that record on the schedule you choose. It can’t fetch quotes from other websites itself.</p>
+<p class="note">The forecast blends simple statistical models (linear trend, damped momentum, mean reversion, and one that follows the international spot forecast) and shows an 80% range from observed volatility. It can’t anticipate news, policy or sudden dealer-association changes, so treat it as an illustration, not financial advice. Spot gold (gold-api.com) and USD→NPR (open.er-api.com) are fetched live in your browser. The Nepal FENEGOSIDA rates and price history come from prices.json in this site’s repository, because I found no public data feed for them. The page re-checks on the schedule you choose.</p>
 </main>
 <script>
 const NP=[["2026-10-02",294800],["2026-10-10",295700],["2026-10-11",296500],["2026-10-12",294400],["2026-10-13",292200],["2026-10-14",289500],["2026-10-15",288400],["2026-10-16",290100],["2026-10-17",290100],["2026-10-18",289700],["2026-10-19",290200],["2026-10-20",290200],["2026-10-21",290200],["2026-10-22",290200],["2026-10-23",290200],["2026-10-24",290200],["2026-10-25",278500],["2026-10-26",281500],["2026-10-27",282300],["2026-10-28",283200],["2026-10-29",283500],["2026-10-30",280300]];
@@ -94,7 +94,7 @@ const K=11.6638/31.1035,UN={tola:1,g10:10/11.6638,g:1/11.6638},UL={tola:"per tol
 const MC={lin:"#3b82c4",mom:"#9b59b6",rev:"#2a9d8f",intl:"#e07a1f"},H=15,KEY="gold-npr-refresh";
 const $=s=>document.querySelector(s),dn=s=>Math.round(Date.parse(s+"T00:00:00Z")/864e5),ds=d=>new Date(d*864e5).toISOString().slice(0,10);
 const seed=()=>({np:NP.map(([d,p])=>({d:dn(d),p})),us:US.map(([d,p])=>({d:dn(d),p})),fx:153,updated:null});
-let S=seed(),unit="tola",on={lin:1,mom:1,rev:1,intl:1},db=null,timer=null,lastSnap=null,nextAt=0,live=false,checked=null;
+let S=seed(),unit="tola",on={lin:1,mom:1,rev:1,intl:1},timer=null,lastSnap=null,nextAt=0,live=false,checked=null;
 const rs=v=>"Rs "+Math.round(v).toLocaleString("en-IN"),pc=v=>(v>=0?"+":"")+v.toFixed(2)+"%",cl=v=>v>=0?"up":"dn";
 const par=u=>u*S.fx*K;
 const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
@@ -132,10 +132,10 @@ function render(){
   const M={lin:F.lin,mom:F.mom,rev:F.rev,intl:il},ks=Object.keys(on).filter(m=>on[m]);
   const ens=[],lo=[],hi=[];
   for(let t=0;t<H;t++){const e=avg(ks.map(m=>M[m][t])),b=1.28*F.sg*Math.sqrt(t+1)*e;ens.push(e);lo.push(e-b);hi.push(e+b)}
-  const back=n=>{const t=np.find(x=>x.d>=ln.d-n)||np[0];return(ln.p/t.p-1)*100},d1=(ln.p/pn.p-1)*100,end=ens[H-1],ch=(end/ln.p-1)*100,pr=(ln.p/par(lu.p)-1)*100;
+  const back=n=>{const t=np.find(x=>x.d>=ln.d-n)||np[0];return(ln.p/t.p-1)*100},d1=(ln.p/pn.p-1)*100,end=ens[H-1],ch=(end/ln.p-1)*100,sp=LIVE.spot||lu.p,pr=(ln.p/par(sp)-1)*100;
   $("#stats").innerHTML=
    `<div class="stat big"><small>Nepal 24K ${UL[unit]} · ${ds(ln.d)}</small><b>${rs(ln.p*k)}</b> <span class="${cl(d1)}">${pc(d1)}</span></div>`+
-   `<div class="stat"><small>International ${UL[unit]} (${ds(lu.d)})</small><b>${rs(par(lu.p)*k)}</b><br><span class="note">$${lu.p.toLocaleString("en-US")}/oz @ ${S.fx}</span></div>`+
+   `<div class="stat"><small>International ${UL[unit]} (${LIVE.spot?"live "+LIVE.at.toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):ds(lu.d)})</small><b>${rs(par(sp)*k)}</b><br><span class="note">$${sp.toLocaleString("en-US",{maximumFractionDigits:2})}/oz @ ${S.fx}</span></div>`+
    `<div class="stat"><small>Nepal premium vs spot</small><b>${pr.toFixed(1)}%</b></div>`+
    `<div class="stat"><small>Forecast ${ds(ln.d+H)} (${H}d)</small><b>${rs(end*k)}</b> <span class="${cl(ch)}">${pc(ch)}</span></div>`+
    `<div class="stat"><small>7-day / 30-day change</small><b class="${cl(back(7))}">${pc(back(7))}</b> <span class="${cl(back(30))}">${pc(back(30))}</span></div>`+
@@ -154,14 +154,19 @@ document.addEventListener("click",e=>{const t=e.target;if(t.dataset.u){unit=t.da
 document.querySelectorAll("[data-m]").forEach(c=>c.addEventListener("change",()=>{on[c.dataset.m]=c.checked?1:0;if(!Object.values(on).some(Boolean)){on[c.dataset.m]=1;c.checked=true}render()}));
 const norm=r=>{try{const f=a=>a.map(x=>({d:dn(x.d),p:+x.p})).filter(x=>x.p>0&&!isNaN(x.d)).sort((a,b)=>a.d-b.d),np=f(r.np),us=f(r.us);if(np.length>2&&us.length>2)return{np,us,fx:+r.fx>50?+r.fx:153,updated:r.updated||null}}catch(e){}return null};
 function apply(s){if(!s||!s.exists)return false;const n=norm(s.data()||{});if(!n)return false;const j=JSON.stringify(n);if(j!==lastSnap){lastSnap=j;S=n;render()}return true}
-function status(){const m=Math.max(0,Math.round((nextAt-Date.now())/1000)),l=S.np[S.np.length-1];$("#st").textContent=(live?"Record updated "+(S.updated||"–"):"Built-in snapshot to "+ds(l.d))+" · latest Nepal rate "+ds(l.d)+(checked?" · checked "+checked.toLocaleTimeString():"")+" · next check "+Math.floor(m/60)+":"+String(m%60).padStart(2,"0")}
+function status(){const m=Math.max(0,Math.round((nextAt-Date.now())/1000)),l=S.np[S.np.length-1];$("#st").textContent=(live?"prices.json updated "+(S.updated||"–"):"Built-in snapshot to "+ds(l.d))+" · latest Nepal rate "+ds(l.d)+(LIVE.at?" · spot "+(LIVE.spot?"live":"unavailable")+", USD→NPR "+(LIVE.fx?"live":"fixed "+S.fx):"")+(checked?" · checked "+checked.toLocaleTimeString():"")+" · next check "+Math.floor(m/60)+":"+String(m%60).padStart(2,"0")}
 function schedule(){const ms=(+$("#rf").value)*6e4;nextAt=Date.now()+ms;clearTimeout(timer);timer=setTimeout(check,ms)}
-async function check(){checked=new Date();try{if(db){const s=await Promise.race([db.doc("gold/latest").get(),new Promise((_,r)=>setTimeout(r,10000))]);live=apply(s)}}catch(e){}schedule();status()}
+let LIVE={spot:null,fx:null,at:null};
+async function getJSON(u){const r=await fetch(u,{cache:"no-store",signal:AbortSignal.timeout?AbortSignal.timeout(8000):undefined});if(!r.ok)throw 0;return r.json()}
+async function fetchLive(){const[a,b]=await Promise.allSettled([getJSON("https://api.gold-api.com/price/XAU"),getJSON("https://open.er-api.com/v6/latest/USD")]);
+  const sp=a.status==="fulfilled"?+(a.value.price??a.value.priceUsd):NaN,fx=b.status==="fulfilled"&&b.value.rates?+b.value.rates.NPR:NaN;
+  LIVE={spot:sp>500&&sp<20000?sp:null,fx:fx>50&&fx<500?fx:null,at:new Date()}}
+async function check(){checked=new Date();try{const r=await fetch("prices.json?t="+Date.now(),{cache:"no-store"});if(r.ok){const j=await r.json();live=apply({exists:true,data:()=>j})}}catch(e){}try{await fetchLive()}catch(e){}if(LIVE.fx)S.fx=LIVE.fx;render();schedule();status()}
 try{const v=localStorage.getItem(KEY);if(["5","15","30"].includes(v))$("#rf").value=v}catch(e){}
 $("#rf").onchange=()=>{try{localStorage.setItem(KEY,$("#rf").value)}catch(e){}schedule();status()};
 $("#rn").onclick=check;
 render();schedule();status();setInterval(status,1000);
-(async()=>{try{const c=window.claude&&await window.claude.use("db");if(c){db=c;await check()}}catch(e){}})();
+check();
 </script>
 </body>
 </html>
