@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gold Tracker & Predictor (NPR)</title>
+<style>
+:root{--bg:#faf8f3;--sf:#fff;--tx:#1d1b16;--mu:#6f6a5d;--ln:#e6e1d4;--au:#b3811a;--bl:#3b82c4;--up:#1b8a4b;--dn:#c93c3c;--bd:rgba(179,129,26,.16);color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15130f;--sf:#1f1c16;--tx:#f1ede2;--mu:#a29b88;--ln:#332f25;--au:#e6b84a;--bl:#6aaee8;--up:#4cc17f;--dn:#ee6b6b;--bd:rgba(230,184,74,.18);color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15130f;--sf:#1f1c16;--tx:#f1ede2;--mu:#a29b88;--ln:#332f25;--au:#e6b84a;--bl:#6aaee8;--up:#4cc17f;--dn:#ee6b6b;--bd:rgba(230,184,74,.18);color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:940px;margin:0 auto;padding:20px 16px 40px}
+h1{font:600 22px/1.2 Georgia,"Times New Roman",serif;margin:0}
+h2{font-size:15px;margin:0 0 10px}
+a{color:var(--au)}
+.sub{color:var(--mu);font-size:13px;margin:4px 0 16px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--sf);border:1px solid var(--ln);border-radius:12px;padding:12px 14px}
+.stat small{color:var(--mu);font-size:12px;display:block}
+.stat b{font:600 20px/1.3 Georgia,serif}
+.stat.big{border-color:var(--au);background:linear-gradient(135deg,var(--bd),transparent)}
+.up{color:var(--up)}.dn{color:var(--dn)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px}
+.seg{display:inline-flex;border:1px solid var(--ln);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;color:var(--mu);padding:6px 12px;cursor:pointer;font:inherit;font-size:13px}
+.seg button.on{background:var(--au);color:#fff}
+label.chk{font-size:13px;color:var(--mu);display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+input,textarea{font:inherit;font-size:14px;color:var(--tx);background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:7px 9px;width:150px}
+textarea{width:100%;height:64px}
+button.act{background:var(--au);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font:inherit;font-size:14px}
+button.ghost{background:transparent;color:var(--mu);border:1px solid var(--ln);border-radius:8px;padding:7px 12px;cursor:pointer;font:inherit;font-size:13px}
+.chart{width:100%;overflow-x:auto}
+svg{width:100%;min-width:520px;height:auto;display:block;touch-action:pan-y}
+.rd{font-size:13px;color:var(--mu);min-height:20px;margin-top:4px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:right;padding:7px 6px;border-bottom:1px solid var(--ln)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mu);font-weight:500;font-size:12px}
+.wrap{overflow-x:auto}
+.note{font-size:12px;color:var(--mu)}
+.x{cursor:pointer;color:var(--mu);border:0;background:none;font-size:15px}
+.lg{font-size:12px;color:var(--mu);display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.lg i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:4px}
+select{font:inherit;font-size:14px;color:var(--tx);background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:6px 8px}
+</style>
+</head>
+<body>
+<main>
+<h1>🪙 Gold Tracker & Predictor · Nepal (NPR)</h1>
+<p class="sub">Nepal rates are FENEGOSIDA fine gold (24K) per tola; international is spot XAU/USD converted to NPR. Check <a href="https://www.fenegosida.org/" target="_blank" rel="noopener">fenegosida.org</a> and <a href="https://goldprice.org/" target="_blank" rel="noopener">goldprice.org</a> for the latest.</p>
+
+<div class="card row" style="justify-content:space-between;margin-bottom:14px"><div class="row" style="margin:0"><b>Auto-refresh</b><select id="rf" aria-label="Refresh rate"><option value="5">Every 5 min</option><option value="15" selected>Every 15 min</option><option value="30">Every 30 min</option></select><button class="ghost" id="rn">Refresh now</button></div><div class="note" id="st">Loading…</div></div>
+
+<div class="grid" id="stats"></div>
+
+<div class="card">
+  <div class="row">
+    <div class="seg" id="units"><button data-u="tola" class="on">Tola</button><button data-u="g10">10 g</button><button data-u="g">Gram</button></div>
+    <label class="chk"><input type="checkbox" data-m="lin" checked style="width:auto"> Trend</label>
+    <label class="chk"><input type="checkbox" data-m="mom" checked style="width:auto"> Momentum</label>
+    <label class="chk"><input type="checkbox" data-m="rev" checked style="width:auto"> Mean reversion</label>
+    <label class="chk"><input type="checkbox" data-m="intl" checked style="width:auto"> Intl-linked</label>
+  </div>
+  <h2>Nepal price: history and 15-day forecast</h2>
+  <div class="chart"><svg id="s1" viewBox="0 0 720 300" role="img" aria-label="Nepal gold price history and 15 day forecast"></svg></div>
+  <div class="rd" id="r1">Hover or tap the chart for values.</div>
+  <div class="lg"><span><i style="background:var(--tx)"></i>Actual</span><span><i style="background:var(--au)"></i>Blended forecast</span><span>Shaded: 80% range</span><span>Dashed: individual models</span></div>
+</div>
+
+<div class="card">
+  <h2>Forecast (next 15 days)</h2>
+  <div class="wrap"><table id="ft"></table></div>
+  <p class="note" id="fnote"></p>
+</div>
+
+<div class="card">
+  <h2>Nepal vs international market</h2>
+  <div class="chart"><svg id="s2" viewBox="0 0 720 300" role="img" aria-label="Nepal price compared with international price in NPR"></svg></div>
+  <div class="rd" id="r2">Hover or tap for values.</div>
+  <div class="lg"><span><i style="background:var(--au)"></i>Nepal (FENEGOSIDA)</span><span><i style="background:var(--bl)"></i>International spot in NPR</span></div>
+  <div class="wrap"><table id="cmp"></table></div>
+  <p class="note">Nepal trades above the converted spot price because of import duty, taxes and dealer margin, and it often adjusts a day or two after global moves.</p>
+</div>
+
+<p class="note">The forecast blends simple statistical models (linear trend, damped momentum, mean reversion, and one that follows the international spot forecast) and shows an 80% range from observed volatility. It can’t anticipate news, policy or sudden dealer-association changes, so treat it as an illustration, not financial advice. Prices come from a shared data record that is updated when new rates are published; the page re-checks that record on the schedule you choose. It can’t fetch quotes from other websites itself.</p>
+</main>
+<script>
+const NP=[["2026-10-02",294800],["2026-10-10",295700],["2026-10-11",296500],["2026-10-12",294400],["2026-10-13",292200],["2026-10-14",289500],["2026-10-15",288400],["2026-10-16",290100],["2026-10-17",290100],["2026-10-18",289700],["2026-10-19",290200],["2026-10-20",290200],["2026-10-21",290200],["2026-10-22",290200],["2026-10-23",290200],["2026-10-24",290200],["2026-10-25",278500],["2026-10-26",281500],["2026-10-27",282300],["2026-10-28",283200],["2026-10-29",283500],["2026-10-30",280300]];
+const US=[["2026-09-12",4389],["2026-09-16",4346],["2026-09-23",4284],["2026-10-05",4153],["2026-10-06",4168],["2026-10-07",4088],["2026-10-09",4169],["2026-10-12",4163],["2026-10-15",4147],["2026-10-16",4168],["2026-10-22",4088],["2026-10-23",4032],["2026-10-26",3995],["2026-10-27",4009],["2026-10-28",3996],["2026-10-30",4005]];
+const K=11.6638/31.1035,UN={tola:1,g10:10/11.6638,g:1/11.6638},UL={tola:"per tola",g10:"per 10 g",g:"per gram"};
+const MC={lin:"#3b82c4",mom:"#9b59b6",rev:"#2a9d8f",intl:"#e07a1f"},H=15,KEY="gold-npr-refresh";
+const $=s=>document.querySelector(s),dn=s=>Math.round(Date.parse(s+"T00:00:00Z")/864e5),ds=d=>new Date(d*864e5).toISOString().slice(0,10);
+const seed=()=>({np:NP.map(([d,p])=>({d:dn(d),p})),us:US.map(([d,p])=>({d:dn(d),p})),fx:153,updated:null});
+let S=seed(),unit="tola",on={lin:1,mom:1,rev:1,intl:1},db=null,timer=null,lastSnap=null,nextAt=0,live=false,checked=null;
+const rs=v=>"Rs "+Math.round(v).toLocaleString("en-IN"),pc=v=>(v>=0?"+":"")+v.toFixed(2)+"%",cl=v=>v>=0?"up":"dn";
+const par=u=>u*S.fx*K;
+const avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
+
+function fc(s){
+  const l=s[s.length-1],w0=s.filter(x=>x.d>=l.d-30),w=w0.length>2?w0:s,mx=avg(w.map(x=>x.d)),my=avg(w.map(x=>x.p));
+  let sxy=0,sxx=0;w.forEach(x=>{sxy+=(x.d-mx)*(x.p-my);sxx+=(x.d-mx)**2});
+  const b=sxx?sxy/sxx:0,a=my-b*mx;let rr=0,dd=0,mu=0;
+  for(let i=1;i<s.length;i++){const dt=s[i].d-s[i-1].d,r=Math.log(s[i].p/s[i-1].p);rr+=r*r;dd+=dt;mu=.3*r/dt+.7*mu}
+  const o={lin:[],mom:[],rev:[],sg:Math.sqrt(rr/dd),b};
+  for(let t=1;t<=H;t++){o.lin.push(a+b*(l.d+t));o.mom.push(l.p*Math.exp(mu*.9*(1-Math.pow(.9,t))/.1));o.rev.push(my+(l.p-my)*Math.exp(-t/20))}
+  return o;
+}
+
+function plot(id,rd,series,band,tip){
+  const svg=$(id),W=720,Ht=300,L=62,R=12,T=12,B=26;let xs=[],ys=[];
+  series.forEach(s=>s.p.forEach(([x,y])=>{xs.push(x);ys.push(y)}));band&&band.forEach(b=>{xs.push(b[0]);ys.push(b[1],b[2])});
+  const x0=Math.min(...xs),x1=Math.max(...xs);let lo=Math.min(...ys),hi=Math.max(...ys);const pd=(hi-lo)*.08||1;lo-=pd;hi+=pd;
+  const X=x=>L+(x-x0)/(x1-x0)*(W-L-R),Y=y=>Ht-B-(y-lo)/(hi-lo)*(Ht-T-B),sh=v=>v>=1e5?Math.round(v/1e3)+"k":v>=1e4?(v/1e3).toFixed(1)+"k":Math.round(v);
+  let s="";
+  for(let i=0;i<=4;i++){const v=lo+(hi-lo)*i/4,y=Y(v);s+=`<line x1="${L}" x2="${W-R}" y1="${y}" y2="${y}" stroke="var(--ln)"/><text x="${L-6}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--mu)">${sh(v)}</text>`}
+  for(let i=0;i<=5;i++){const d=x0+(x1-x0)*i/5;s+=`<text x="${X(d)}" y="${Ht-8}" text-anchor="middle" font-size="11" fill="var(--mu)">${ds(Math.round(d)).slice(5)}</text>`}
+  if(band){const up=band.map(b=>`${X(b[0])},${Y(b[2])}`),dw=band.map(b=>`${X(b[0])},${Y(b[1])}`).reverse();s+=`<polygon points="${up.concat(dw).join(" ")}" fill="var(--au)" opacity=".16"/>`}
+  series.forEach(q=>{s+=`<polyline fill="none" stroke="${q.c}" stroke-width="${q.w||2}"${q.dash?' stroke-dasharray="4 3"':""} points="${q.p.map(([x,y])=>X(x)+","+Y(y)).join(" ")}"/>`;if(q.dots)q.p.forEach(([x,y])=>{s+=`<circle cx="${X(x)}" cy="${Y(y)}" r="2.6" fill="${q.c}"/>`})});
+  s+=`<line class="cur" y1="${T}" y2="${Ht-B}" stroke="var(--au)" opacity="0"/><rect class="hit" x="${L}" y="${T}" width="${W-L-R}" height="${Ht-T-B}" fill="transparent"/>`;
+  svg.innerHTML=s;
+  const mv=e=>{const r=svg.getBoundingClientRect(),px=(e.clientX-r.left)/r.width*W,d=Math.round(x0+(px-L)/(W-L-R)*(x1-x0));if(d<x0||d>x1)return;
+    $(rd).textContent=tip(d);const c=svg.querySelector(".cur");c.setAttribute("x1",X(d));c.setAttribute("x2",X(d));c.setAttribute("opacity",.6)};
+  const h=svg.querySelector(".hit");h.addEventListener("pointermove",mv);h.addEventListener("pointerdown",mv);
+}
+
+function render(){
+  const k=UN[unit],np=S.np,us=S.us,ln=np[np.length-1],pn=np[np.length-2],lu=us[us.length-1],F=fc(np),G=fc(us);
+  const il=[];for(let t=0;t<H;t++)il.push(ln.p*avg([G.lin[t],G.mom[t],G.rev[t]])/lu.p);
+  const M={lin:F.lin,mom:F.mom,rev:F.rev,intl:il},ks=Object.keys(on).filter(m=>on[m]);
+  const ens=[],lo=[],hi=[];
+  for(let t=0;t<H;t++){const e=avg(ks.map(m=>M[m][t])),b=1.28*F.sg*Math.sqrt(t+1)*e;ens.push(e);lo.push(e-b);hi.push(e+b)}
+  const back=n=>{const t=np.find(x=>x.d>=ln.d-n)||np[0];return(ln.p/t.p-1)*100},d1=(ln.p/pn.p-1)*100,end=ens[H-1],ch=(end/ln.p-1)*100,pr=(ln.p/par(lu.p)-1)*100;
+  $("#stats").innerHTML=
+   `<div class="stat big"><small>Nepal 24K ${UL[unit]} · ${ds(ln.d)}</small><b>${rs(ln.p*k)}</b> <span class="${cl(d1)}">${pc(d1)}</span></div>`+
+   `<div class="stat"><small>International ${UL[unit]} (${ds(lu.d)})</small><b>${rs(par(lu.p)*k)}</b><br><span class="note">$${lu.p.toLocaleString("en-US")}/oz @ ${S.fx}</span></div>`+
+   `<div class="stat"><small>Nepal premium vs spot</small><b>${pr.toFixed(1)}%</b></div>`+
+   `<div class="stat"><small>Forecast ${ds(ln.d+H)} (${H}d)</small><b>${rs(end*k)}</b> <span class="${cl(ch)}">${pc(ch)}</span></div>`+
+   `<div class="stat"><small>7-day / 30-day change</small><b class="${cl(back(7))}">${pc(back(7))}</b> <span class="${cl(back(30))}">${pc(back(30))}</span></div>`+
+   `<div class="stat"><small>Volatility (annualised)</small><b>${(F.sg*Math.sqrt(365)*100).toFixed(1)}%</b></div>`;
+  const hs=np.map(x=>[x.d,x.p*k]),st=[[ln.d,ln.p*k]],fcp=m=>st.concat(m.map((v,i)=>[ln.d+i+1,v*k]));
+  const sr=[{c:"var(--tx)",p:hs,w:2,dots:1}];ks.forEach(m=>sr.push({c:MC[m],p:fcp(M[m]),w:1.3,dash:1}));sr.push({c:"var(--au)",p:fcp(ens),w:2.8});
+  plot("#s1","#r1",sr,ens.map((e,i)=>[ln.d+i+1,lo[i]*k,hi[i]*k]),d=>{if(d<=ln.d){const n=np.reduce((a,x)=>Math.abs(x.d-d)<Math.abs(a.d-d)?x:a);return`${ds(n.d)} · actual ${rs(n.p*k)}`}const t=d-ln.d;return`${ds(d)} · forecast ${rs(ens[t-1]*k)} (range ${rs(lo[t-1]*k)} – ${rs(hi[t-1]*k)})`});
+  $("#ft").innerHTML=`<tr><th>Date</th><th>Forecast ${UL[unit]}</th><th>80% range</th><th>Change</th></tr>`+[1,3,5,7,10,15].map(h=>`<tr><td>${ds(ln.d+h)} (+${h}d)</td><td>${rs(ens[h-1]*k)}</td><td>${rs(lo[h-1]*k)} – ${rs(hi[h-1]*k)}</td><td class="${cl(ens[h-1]-ln.p)}">${pc((ens[h-1]/ln.p-1)*100)}</td></tr>`).join("");
+  $("#fnote").textContent=`Blend: ${ks.map(m=>({lin:"Trend",mom:"Momentum",rev:"Mean reversion",intl:"Intl-linked"})[m]).join(", ")}. Daily volatility ≈ ${(F.sg*100).toFixed(2)}% from ${np.length} Nepal prices. Trend currently ${F.b>=0?"rising":"falling"} about ${rs(Math.abs(F.b)*k)}/day.`;
+  const cm=np.map(x=>{const u=us.find(y=>y.d===x.d);return u&&{d:x.d,n:x.p*k,i:par(u.p)*k,u:u.p}}).filter(Boolean);
+  plot("#s2","#r2",[{c:"var(--au)",p:cm.map(c=>[c.d,c.n]),dots:1},{c:"var(--bl)",p:cm.map(c=>[c.d,c.i]),dots:1}],null,d=>{const c=cm.reduce((a,x)=>Math.abs(x.d-d)<Math.abs(a.d-d)?x:a);return`${ds(c.d)} · Nepal ${rs(c.n)} · intl ${rs(c.i)} · premium ${((c.n/c.i-1)*100).toFixed(1)}%`});
+  $("#cmp").innerHTML=`<tr><th>Date</th><th>Nepal</th><th>Intl (NPR)</th><th>Spot USD/oz</th><th>Premium</th></tr>`+cm.slice(-6).reverse().map(c=>`<tr><td>${ds(c.d)}</td><td>${rs(c.n)}</td><td>${rs(c.i)}</td><td>$${c.u.toLocaleString("en-US")}</td><td>${((c.n/c.i-1)*100).toFixed(1)}%</td></tr>`).join("");
+}
+
+document.addEventListener("click",e=>{const t=e.target;if(t.dataset.u){unit=t.dataset.u;document.querySelectorAll("#units button").forEach(b=>b.classList.toggle("on",b===t));render()}});
+document.querySelectorAll("[data-m]").forEach(c=>c.addEventListener("change",()=>{on[c.dataset.m]=c.checked?1:0;if(!Object.values(on).some(Boolean)){on[c.dataset.m]=1;c.checked=true}render()}));
+const norm=r=>{try{const f=a=>a.map(x=>({d:dn(x.d),p:+x.p})).filter(x=>x.p>0&&!isNaN(x.d)).sort((a,b)=>a.d-b.d),np=f(r.np),us=f(r.us);if(np.length>2&&us.length>2)return{np,us,fx:+r.fx>50?+r.fx:153,updated:r.updated||null}}catch(e){}return null};
+function apply(s){if(!s||!s.exists)return false;const n=norm(s.data()||{});if(!n)return false;const j=JSON.stringify(n);if(j!==lastSnap){lastSnap=j;S=n;render()}return true}
+function status(){const m=Math.max(0,Math.round((nextAt-Date.now())/1000)),l=S.np[S.np.length-1];$("#st").textContent=(live?"Record updated "+(S.updated||"–"):"Built-in snapshot to "+ds(l.d))+" · latest Nepal rate "+ds(l.d)+(checked?" · checked "+checked.toLocaleTimeString():"")+" · next check "+Math.floor(m/60)+":"+String(m%60).padStart(2,"0")}
+function schedule(){const ms=(+$("#rf").value)*6e4;nextAt=Date.now()+ms;clearTimeout(timer);timer=setTimeout(check,ms)}
+async function check(){checked=new Date();try{if(db){const s=await Promise.race([db.doc("gold/latest").get(),new Promise((_,r)=>setTimeout(r,10000))]);live=apply(s)}}catch(e){}schedule();status()}
+try{const v=localStorage.getItem(KEY);if(["5","15","30"].includes(v))$("#rf").value=v}catch(e){}
+$("#rf").onchange=()=>{try{localStorage.setItem(KEY,$("#rf").value)}catch(e){}schedule();status()};
+$("#rn").onclick=check;
+render();schedule();status();setInterval(status,1000);
+(async()=>{try{const c=window.claude&&await window.claude.use("db");if(c){db=c;await check()}}catch(e){}})();
+</script>
+</body>
+</html>
