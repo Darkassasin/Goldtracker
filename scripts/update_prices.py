@@ -34,14 +34,29 @@ def rendered_text():
         return t
 
 
-def parse(text):
+GOLD_RE = re.compile(r"\bGold\b[^0-9]{0,12}[\d.]+\s*%[^0-9]{0,12}(\d[\d,]*(?:\.\d+)?)", re.I)
+
+
+def to_tola(v, last):
+    """The site shows either the per-tola or the per-10g rate; tola rates are multiples of 100."""
+    if abs(v / last - 1) <= 0.10:
+        return int(round(v / 100.0)) * 100
+    t = v * 11.6638 / 10
+    if abs(t / last - 1) <= 0.10:
+        return int(round(t / 100.0)) * 100
+    return None
+
+
+def parse(text, last):
     t = re.sub(r"\s+", " ", text)
+    cands = [float(m.group(1).replace(",", "")) for m in GOLD_RE.finditer(t)]
     for gap in (r"[^0-9]{0,60}?(?:tola|तोला)[^0-9]{0,40}?", r"[^0-9]{0,60}?"):
-        m = re.search(LABEL + gap + r"(\d[\d,]{4,8})", t, re.I)
-        if m:
-            v = int(m.group(1).replace(",", ""))
-            if 50000 < v < 2000000:
-                return v
+        for m in re.finditer(LABEL + gap + r"(\d[\d,]{4,8})", t, re.I):
+            cands.append(float(m.group(1).replace(",", "")))
+    for v in cands:
+        r = to_tola(v, last)
+        if r:
+            return r
     return None
 
 
@@ -61,16 +76,13 @@ def main():
     d = json.load(open("prices.json", encoding="utf-8"))
     last = d["np"][-1]["p"]
     seen = raw_text()
-    v = parse(seen)
+    v = parse(seen, last)
     if not v:
         t = rendered_text()
         seen += " " + t
-        v = parse(t)
+        v = parse(t, last)
     if not v:
-        print("Could not find the hallmark gold rate. Text seen:\n", re.sub(r"\s+", " ", seen)[:1500])
-        sys.exit(1)
-    if abs(v / last - 1) > 0.10:
-        print(f"Rejected {v}: more than 10% away from last stored rate {last}.")
+        print("Could not find a valid gold rate. Text seen:\n", re.sub(r"\s+", " ", seen)[:1500])
         sys.exit(1)
     now = datetime.now(NPT)
     today = now.strftime("%Y-%m-%d")
