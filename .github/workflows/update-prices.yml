@@ -1,7 +1,7 @@
 name: Update prices
 on:
   schedule:
-    - cron: "*/30 4-8 * * 0-5"   # every 30 min, about 09:45-14:45 Nepal time, Sun-Fri
+    - cron: "15 5 * * *"   # 05:15 UTC = 11:00 AM NPT | Runs daily, Monday–Sunday.
   workflow_dispatch:
 permissions:
   contents: write
